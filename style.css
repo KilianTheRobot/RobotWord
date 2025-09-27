@@ -1,0 +1,30 @@
+body {
+	background: #181c20;
+	color: #f0f0f0;
+	font-family: 'Segoe UI', Arial, sans-serif;
+	text-align: center;
+	margin: 0;
+	padding: 0;
+}
+h1 {
+	margin-top: 20px;
+	font-size: 2.2em;
+	letter-spacing: 2px;
+}
+#gameCanvas {
+	background: #23272b;
+	display: block;
+	margin: 30px auto 10px auto;
+	border: 3px solid #444;
+	border-radius: 10px;
+	box-shadow: 0 0 20px #000a;
+}
+#info {
+	margin-top: 10px;
+	font-size: 1.1em;
+}
+#levelInfo, #weaponInfo {
+	margin: 5px 0;
+	font-weight: bold;
+	color: #ffb347;
+}
