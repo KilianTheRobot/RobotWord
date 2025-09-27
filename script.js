@@ -26,11 +26,12 @@ let enemies = [];
 let bullets = [];
 let keys = {};
 
+
+// Waffen: Laser (Start), Schwert (Nahkampf), Super-Pistole (Fernkampf)
 const weapons = [
-	{ name: 'Laser', color: '#00eaff', speed: 8, size: 6, damage: 1, cooldown: 20 },
-	{ name: 'Doppel-Laser', color: '#00ff6a', speed: 10, size: 7, damage: 2, cooldown: 15 },
-	{ name: 'Plasma', color: '#ff00e1', speed: 13, size: 10, damage: 3, cooldown: 12 },
-	{ name: 'Hyperstrahl', color: '#fff700', speed: 16, size: 13, damage: 5, cooldown: 8 },
+	{ name: 'Laser', type: 'ranged', color: '#00eaff', speed: 8, size: 6, damage: 1, cooldown: 20 },
+	{ name: 'Schwert', type: 'melee', color: '#ff8800', damage: 2, cooldown: 25 },
+	{ name: 'Super-Pistole', type: 'ranged', color: '#fff700', speed: 14, size: 12, damage: 2, cooldown: 10 },
 ];
 
 function spawnEnemies() {
@@ -43,7 +44,7 @@ function spawnEnemies() {
 			h: 36,
 			color: '#6cf',
 			alive: true,
-			hp: 1 + Math.floor(level/2),
+			hp: 3, // Immer 3 Treffer nötig, außer mit Spezialwaffen
 		});
 	}
 }
@@ -107,12 +108,28 @@ function checkBulletHits() {
 	bullets.forEach(b => {
 		enemies.forEach(e => {
 			if (e.alive && rectsCollide(b, e)) {
-				e.hp -= weapons[weaponLevel-1].damage;
+				// Super-Pistole macht 2 Schaden, Laser 1
+				let dmg = weapons[weaponLevel-1].damage;
+				e.hp -= dmg;
 				b.x = -1000; // Entferne Bullet
 				if (e.hp <= 0) e.alive = false;
 			}
 		});
 	});
+}
+
+function checkSwordHit() {
+	// Nur wenn aktuelle Waffe Schwert ist
+	if (weapons[weaponLevel-1].type !== 'melee' || player.shootCooldown > 0) return;
+	let hit = false;
+	enemies.forEach(e => {
+		if (e.alive && rectsCollide({x: player.x+player.w-10, y: player.y+10, w: 30, h: 20}, e)) {
+			e.hp -= weapons[weaponLevel-1].damage;
+			hit = true;
+			if (e.hp <= 0) e.alive = false;
+		}
+	});
+	if (hit) player.shootCooldown = weapons[weaponLevel-1].cooldown;
 }
 
 function rectsCollide(a, b) {
@@ -122,26 +139,42 @@ function rectsCollide(a, b) {
 function shoot() {
 	if (!player.canShoot || player.shootCooldown > 0) return;
 	const weapon = weapons[weaponLevel-1];
-	if (weaponLevel === 2) {
-		// Doppel-Laser
-		bullets.push({ x: player.x + player.w, y: player.y + 8, speed: weapon.speed, color: weapon.color, size: weapon.size });
-		bullets.push({ x: player.x + player.w, y: player.y + player.h - 12, speed: weapon.speed, color: weapon.color, size: weapon.size });
-	} else {
-		bullets.push({ x: player.x + player.w, y: player.y + player.h/2 - 2, speed: weapon.speed, color: weapon.color, size: weapon.size });
-	}
-	player.shootCooldown = weapon.cooldown;
+		if (weapon.type === 'ranged') {
+			bullets.push({
+				x: player.x + player.w,
+				y: player.y + player.h/2 - 2,
+				w: weapon.size,
+				h: 4,
+				speed: weapon.speed,
+				color: weapon.color,
+				size: weapon.size
+			});
+			player.shootCooldown = weapon.cooldown;
+		}
 }
 
 function nextLevel() {
 	level++;
-	if (weaponLevel < weapons.length) weaponLevel++;
+	// Waffen abwechselnd: Schwert, Super-Pistole, Schwert, ...
+	if (weaponLevel < weapons.length) {
+		weaponLevel++;
+	} else {
+		weaponLevel = 2 + ((level-2)%2); // 2=Schwert, 3=Super-Pistole
+	}
 	spawnEnemies();
 	updateUI();
+	gameActive = true;
 }
 
 function updateUI() {
 	levelInfo.textContent = `Level: ${level}`;
-	weaponInfo.textContent = `Waffe: ${weapons[weaponLevel-1].name}`;
+	let waffe = weapons[weaponLevel-1].name;
+	if (weapons[weaponLevel-1].type === 'melee') {
+		waffe += ' (Taste F für Nahkampf)';
+	} else {
+		waffe += ' (Leertaste für Schuss)';
+	}
+	weaponInfo.textContent = `Waffe: ${waffe}`;
 }
 
 function gameOver() {
@@ -176,6 +209,7 @@ function gameLoop() {
 document.addEventListener('keydown', e => {
 	keys[e.key.toLowerCase()] = true;
 	if (e.key === ' ') shoot();
+	if (e.key.toLowerCase() === 'f') checkSwordHit();
 });
 document.addEventListener('keyup', e => {
 	keys[e.key.toLowerCase()] = false;
